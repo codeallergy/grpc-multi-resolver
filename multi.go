@@ -13,6 +13,7 @@ package multiresolver
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 	"sync"
 
@@ -36,18 +37,23 @@ func (builder) Build(target resolver.Target, cc resolver.ClientConn, opts resolv
 		cc: cc,
 	}
 	var mr multiResolver
-	for _, t := range strings.Split(target.Endpoint, ",") {
-		parsedTarget := ParseTarget(t)
-		resolverBuilder := resolver.Get(parsedTarget.Scheme)
+	for _, t := range strings.Split(target.Endpoint(), ",") {
+		endpoint, err := url.Parse(t)
+		if err != nil {
+			return nil, fmt.Errorf("url parsing error of '%s', %v", t, err)
+		}
+		scheme := endpoint.Scheme
+		resolverBuilder := resolver.Get(scheme)
 		if resolverBuilder == nil {
-			parsedTarget = resolver.Target{
-				Scheme:   resolver.GetDefaultScheme(),
-				Endpoint: t,
-			}
-			resolverBuilder = resolver.Get(parsedTarget.Scheme)
+			scheme = resolver.GetDefaultScheme()
+			resolverBuilder = resolver.Get(scheme)
 			if resolverBuilder == nil {
-				return nil, fmt.Errorf("could not get resolver for default scheme: %q", parsedTarget.Scheme)
+				return nil, fmt.Errorf("could not get resolver for default scheme: %q", scheme)
 			}
+		}
+		parsedTarget := resolver.Target{
+			Scheme:   scheme,
+			URL: *endpoint,
 		}
 		pcc := &partialClientConn{parent: pccg}
 		pccg.parts = append(pccg.parts, pcc)
