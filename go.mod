@@ -1,4 +1,4 @@
-module github.com/Jille/grpc-multi-resolver
+module github.com/codeallergy/grpc-multi-resolver
 
 go 1.17
 
